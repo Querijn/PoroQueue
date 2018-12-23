@@ -7,6 +7,7 @@ using System.Linq;
 using WebSocketSharp;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace PoroQueue
 {
@@ -16,6 +17,8 @@ namespace PoroQueue
         public static event EventHandler Stopped;
         public static event EventHandler LoggedIn;
         public static event EventHandler LoggedOut;
+        public static event EventHandler IconChanged;
+
         public static bool IsActive { get; private set; }
         public static bool IsLoggedIn { get; private set; }
         public static Summoner CurrentSummoner { get; private set; }
@@ -25,6 +28,18 @@ namespace PoroQueue
         private static string DataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PoroQueue");
         private static FileSystemWatcher Watcher = new FileSystemWatcher();
         private static WebSocket Connection = null;
+        private static int ForcedPoroIcon = 0;
+
+        private const string SummonerIconChangedEvent = "OnJsonApiEvent_lol-summoner_v1_current-summoner";
+        private const string LoggedInEvent = "OnJsonApiEvent_lol-login_v1_login-data-packet";
+        private const string QueueUpEvent = "OnJsonApiEvent_lol-lobby-team-builder_v1_lobby";
+
+#if DEBUG_EVENTS
+        class DebugEventHelper
+        {
+            public Dictionary<string, string> events;
+        };
+#endif
 
         static LeagueOfLegends()
         {
@@ -96,10 +111,35 @@ namespace PoroQueue
             APIDomain = String.Format("{0}://127.0.0.1:{1}", Protocol, Port);
             Request.SetUserData("riot", Password);
 
+#if DEBUG_EVENTS
+            var AllEventsText = await Request.Get(APIDomain + "/help");
+            File.WriteAllText("events.json", AllEventsText);
+#endif
+
             var Versions = await JSONRequest.Get<string[]>("http://ddragon.leagueoflegends.com/api/versions.json");
             LatestVersion = Versions[0];
 
             Started?.Invoke(null, EventArgs.Empty);
+
+            Connection = new WebSocket("wss://127.0.0.1:" + Port + "/", "wamp");
+            Connection.SetCredentials("riot", Password, true);
+            Connection.SslConfiguration.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12;
+            Connection.OnMessage += OnWebsocketMessage;
+            Connection.Connect();
+
+#if !DEBUG_EVENTS
+            Connection.Send("[5,\"" + SummonerIconChangedEvent + "\"]");
+            Connection.Send("[5,\"" + QueueUpEvent + "\"]");
+#else
+            var HelpDocument = JsonConvert.DeserializeObject<DebugEventHelper>(AllEventsText);
+            foreach (var EventName in HelpDocument.events)
+            {
+                var Event = EventName.Key;
+                if (Event == "OnJsonApiEvent")
+                    continue;
+                Connection.Send("[5,\"" + Event + "\"]");
+            }
+#endif
 
             try
             {
@@ -111,38 +151,59 @@ namespace PoroQueue
             // We aren't logged in!
             catch (System.Net.Http.HttpRequestException e)
             {
-                Connection = new WebSocket("wss://127.0.0.1:" + Port + "/", "wamp");
-                Connection.SetCredentials("riot", Password, true);
-                Connection.SslConfiguration.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12;
-                Connection.OnMessage += OnWebsocketMessage;
-                Connection.Connect();
-                Connection.Send("[5,\"OnJsonApiEvent_lol-login_v1_login-data-packet\"]");
+#if !DEBUG_EVENTS
+                Connection.Send("[5,\"" + LoggedInEvent + "\"]");
+#endif
             }
         }
 
         private static async void OnWebsocketMessage(object sender, MessageEventArgs e)
         {
-            var messages = JsonConvert.DeserializeObject<object[]>(e.Data);
+            var Messages = JsonConvert.DeserializeObject<object[]>(e.Data);
 
-            int type = 0;
-            if (!int.TryParse(messages[0].ToString(), out type) || type != 8)
+            int MessageType = 0;
+            if (!int.TryParse(Messages[0].ToString(), out MessageType) || MessageType != 8)
                 return;
 
-            while (true)
-            {
-                try
-                {
-                    CurrentSummoner = await Summoner.GetCurrent();
-                    IsLoggedIn = true;
-                    LoggedIn?.Invoke(null, EventArgs.Empty);
-                    break;
-                }
+            var EventName = Messages[1].ToString();
+#if DEBUG_EVENTS
+            Debug.WriteLine("Received an event: " + EventName);
+#endif
 
-                // We aren't logged in!
-                catch (System.Net.Http.HttpRequestException)
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(5));
-                }
+            switch (EventName)
+            {
+                case LoggedInEvent:
+                    while (!IsLoggedIn)
+                    {
+                        try
+                        {
+                            CurrentSummoner = await Summoner.GetCurrent();
+                            IsLoggedIn = true;
+                            LoggedIn?.Invoke(null, EventArgs.Empty);
+                            break;
+                        }
+
+                        // We aren't logged in!
+                        catch (System.Net.Http.HttpRequestException)
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(5));
+                        }
+                    }
+                    break;
+
+                case SummonerIconChangedEvent:
+                    CurrentSummoner = await Summoner.GetCurrent();
+
+                    if (CurrentSummoner.profileIconId != ForcedPoroIcon)
+                        IconChanged?.Invoke(null, EventArgs.Empty);
+                    else if (ForcedPoroIcon != 0)
+                        Icon.Set(ForcedPoroIcon);
+                    break;
+
+                case QueueUpEvent:
+                    var Message = JsonConvert.DeserializeObject<LobbyMatchmakingEvent>(Messages[2].ToString());
+                    ForcedPoroIcon = Icon.SetToPoro();
+                    break;
             }
         }
 

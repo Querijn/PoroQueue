@@ -10,6 +10,7 @@ namespace PoroQueue
     public static class Icon
     {
         private static string CacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PoroQueue", "Cache");
+        private static EffectIcon[] AllowedIcons = null;
 
         static Icon()
         {
@@ -74,7 +75,21 @@ namespace PoroQueue
 
         public static async Task<EffectIcon[]> GetAllowedIcons()
         {
-            return await JSONRequest.Get<EffectIcon[]>("https://querijn.codes/poro_queue/icons.json");
+            if (AllowedIcons == null)
+                AllowedIcons = await JSONRequest.Get<EffectIcon[]>("https://querijn.codes/poro_queue/icons.json");
+
+            return AllowedIcons;
+        }
+
+        internal static int SetToPoro()
+        {
+
+            return 0;
+        }
+
+        internal static void Set(int forcedPoroIcon)
+        {
+            throw new NotImplementedException();
         }
     }
 }

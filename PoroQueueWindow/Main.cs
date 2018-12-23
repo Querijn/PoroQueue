@@ -40,12 +40,19 @@ namespace PoroQueueWindow
                 UIThread.Post(o => RemoveLeagueData(), null);
         }
 
+        private async Task SetCurrentIcon()
+        {
+            await Task.Run(() => PoroQueue.Icon.LoadCurrentIntoPictureBox(DefaultIcon));
+        }
+
         private async void InitLeagueData()
         {
             UpdateLeagueStatus();
 
-            await Task.Run(() => PoroQueue.Icon.LoadCurrentIntoPictureBox(DefaultIcon));
+            await SetCurrentIcon();
             await SetupIcons();
+
+            PoroQueue.LeagueOfLegends.IconChanged += (s,e) => UIThread.Post(async o => await SetCurrentIcon(), null);
 
             IconGroup.Resize += async (a, b) => await SetupIcons();
         }
@@ -71,11 +78,16 @@ namespace PoroQueueWindow
         {
             try
             {
-                var Icons = await PoroQueue.Icon.GetOwnedIconIDs();
-                var AllowedIcons = await PoroQueue.Icon.GetAllowedIcons();
+                var IconsTask = PoroQueue.Icon.GetOwnedIconIDs();
+                var AllowedIconsTask = PoroQueue.Icon.GetAllowedIcons();
                 int x = IconGroup.Margin.Left + IconGroup.Padding.Left + 10, y = IconGroup.Margin.Top + IconGroup.Padding.Top + 16;
                 int InitialX = x, InitialY = y;
                 int Width = IconGroup.Width - (IconGroup.Margin.Right + IconGroup.Padding.Right);
+
+                await Task.WhenAll(new Task[] { IconsTask, AllowedIconsTask });
+                var Icons = IconsTask.Result;
+                var AllowedIcons = AllowedIconsTask.Result;
+
                 foreach (var AllowedIcon in AllowedIcons)
                 {
                     var Icon = Icons.FirstOrDefault(i => i == AllowedIcon.ID);
@@ -157,10 +169,8 @@ namespace PoroQueueWindow
                         x = InitialX;
                         y += Element.Container.Size.Height + 20;
 
-                        if (this.Height < y + 230)
-                        {
-                            this.Height = y + 230;
-                        }
+                        if (Height < y + 230)
+                            Height = y + 230;
                     }
                 }
             }
