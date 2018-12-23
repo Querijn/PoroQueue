@@ -1,0 +1,6 @@
+packages/
+.vs/
+PoroQueue/bin/
+PoroQueue/obj/
+PoroQueueWindow/obj/
+PoroQueueWindow/bin/
