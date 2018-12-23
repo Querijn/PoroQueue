@@ -18,17 +18,10 @@ namespace PoroQueue
                 Directory.CreateDirectory(CacheDirectory);
         }
 
-        public enum GameMode
-        {
-            ARAM = 0,
-            NexusBlitz = 1,
-            URF = 2
-        };
-
         public class EffectIcon
         {
             public int ID;
-            public GameMode[] GameModes;
+            public LeagueOfLegends.GameMode[] GameModes;
         };
 
         public static async void LoadCurrentIntoPictureBox(PictureBox Picture)
@@ -73,7 +66,7 @@ namespace PoroQueue
             return (await MissionDataRequest.Get()).playerInventory.icons.ToArray();
         }
 
-        public static async Task<EffectIcon[]> GetAllowedIcons()
+        public static async Task<EffectIcon[]> GetEffectIcons()
         {
             if (AllowedIcons == null)
                 AllowedIcons = await JSONRequest.Get<EffectIcon[]>("https://querijn.codes/poro_queue/icons.json");
