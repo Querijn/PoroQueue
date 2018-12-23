@@ -82,7 +82,7 @@ namespace PoroQueue
 
         internal static void SetToPoro(LeagueOfLegends.GameMode Mode, out int IconID)
         {
-            string ID = Config.GetEntryIDForCurrentSummoner();
+            string ID = Config.Current.GetEntryIDForCurrentSummoner();
 
             int[] IconSet;
             int Index;
@@ -106,10 +106,17 @@ namespace PoroQueue
                     break;
             }
 
+            Default = LeagueOfLegends.CurrentSummoner.profileIconId;
+            if (IconSet.Length == 0)
+            {
+                IconID = Default;
+                return;
+            }
+
             if (Index >= IconSet.Length)
                 Index = 0;
 
-            Default = LeagueOfLegends.CurrentSummoner.profileIconId;
+            
             IconID = IconSet[Index];
             Set(IconID);
 

@@ -231,7 +231,7 @@ namespace PoroQueueWindow
                     }
                 }
             }
-            catch (Exception e)
+            catch (System.Net.Http.HttpRequestException e)
             {
                 // Debug.Break();
             }
