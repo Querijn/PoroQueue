@@ -1,4 +1,6 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -7,6 +9,14 @@ namespace PoroQueue
 {
     public static class Icon
     {
+        private static string CacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PoroQueue", "Cache");
+
+        static Icon()
+        {
+            if (!Directory.Exists(CacheDirectory))
+                Directory.CreateDirectory(CacheDirectory);
+        }
+
         public enum GameMode
         {
             ARAM = 0,
@@ -31,6 +41,13 @@ namespace PoroQueue
 
         public static async void LoadIntoPictureBox(int Icon, PictureBox Picture)
         {
+            var CacheLocation = Path.Combine(CacheDirectory, Icon + ".png");
+            if (File.Exists(CacheLocation))
+            {
+                Picture.Image = Image.FromFile(CacheLocation);
+                return;
+            }
+
             var CDragonRequestFormat = "https://cdn.communitydragon.org/{0}/profile-icon/{1}";
             var RequestURL = string.Format(CDragonRequestFormat, LeagueOfLegends.LatestVersion, Icon.ToString());
             var Request = WebRequest.Create(RequestURL);
@@ -41,7 +58,10 @@ namespace PoroQueue
                 {
                     using (var ResponseStream = Response.GetResponseStream())
                     {
-                        Picture.Image = Image.FromStream(ResponseStream);
+                        var Result = Image.FromStream(ResponseStream);
+                        Result.Save(CacheLocation);
+
+                        Picture.Image = Result;
                     }
                 }
             });
