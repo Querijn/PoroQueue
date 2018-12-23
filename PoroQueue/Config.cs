@@ -42,10 +42,16 @@ namespace PoroQueue
             }
         }
 
-        public static string GetEntryIDForCurrentSummoner()
+        public string GetEntryIDForCurrentSummoner()
         {
             if (LeagueOfLegends.CurrentSummoner == null)
                 return "Default";
+
+            if (!Entries.Any(e => e.Key == LeagueOfLegends.CurrentSummoner.puuid))
+            {
+                Entries.Add(LeagueOfLegends.CurrentSummoner.puuid, new SummonerConfig());
+                Save();
+            }
 
             return LeagueOfLegends.CurrentSummoner.puuid;
         }
