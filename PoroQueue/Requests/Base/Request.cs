@@ -37,5 +37,23 @@ namespace PoroQueue
                 return await Response.Content.ReadAsStringAsync();
             }
         }
+
+        public static async Task<string> Put(string URL, string Body)
+        {
+            HttpClient Client = new HttpClient();
+            StringContent Content = new StringContent(Body, System.Text.Encoding.UTF8, "application/json");
+            ServicePointManager.ServerCertificateValidationCallback = delegate { return true; }; // idc lol
+            Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            Client.Timeout = new TimeSpan(0, 0, 15);
+            Client.DefaultRequestHeaders.Authorization = AuthHeader;
+
+            using (Client)
+            {
+                HttpResponseMessage Response = await Client.PutAsync(URL, Content);
+                Response.EnsureSuccessStatusCode();
+
+                return await Response.Content.ReadAsStringAsync();
+            }
+        }
     }
 }

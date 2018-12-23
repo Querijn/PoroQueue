@@ -48,6 +48,7 @@ namespace PoroQueue
         private const string LoggedInEvent = "OnJsonApiEvent_lol-login_v1_login-data-packet";
         private const string QueueUpEvent = "OnJsonApiEvent_lol-lobby-team-builder_v1_lobby";
         private const string GameModeChangedEvent = "OnJsonApiEvent_lol-lobby_v2_lobby";
+        private const string GameEvent = "OnJsonApiEvent_lol-gameflow_v1_session";
 
 #if DEBUG_EVENTS
         class DebugEventHelper
@@ -127,8 +128,14 @@ namespace PoroQueue
             Request.SetUserData("riot", Password);
 
 #if DEBUG_EVENTS
-            var AllEventsText = await Request.Get(APIDomain + "/help");
-            File.WriteAllText("events.json", AllEventsText);
+            try
+            {
+                var AllEventsText = await Request.Get(APIDomain + "/help");
+                File.WriteAllText("events.json", AllEventsText);
+            }
+            catch (System.Net.Http.HttpRequestException)
+            {
+            }
 #endif
 
             var Versions = await JSONRequest.Get<string[]>("http://ddragon.leagueoflegends.com/api/versions.json");
@@ -147,7 +154,7 @@ namespace PoroQueue
             Connection.Send("[5,\"" + QueueUpEvent + "\"]");
             Connection.Send("[5,\"" + GameModeChangedEvent + "\"]");
 #else
-            var HelpDocument = JsonConvert.DeserializeObject<DebugEventHelper>(AllEventsText);
+            var HelpDocument = JsonConvert.DeserializeObject<DebugEventHelper>(File.ReadAllText("events.json"));
             foreach (var EventName in HelpDocument.events)
             {
                 var Event = EventName.Key;
@@ -224,8 +231,30 @@ namespace PoroQueue
                     break;
 
                 case QueueUpEvent:
-                    var Message = JsonConvert.DeserializeObject<LobbyMatchmakingEvent>(Messages[2].ToString());
-                    ForcedPoroIcon = Icon.SetToPoro();
+                    var QueueEvent = Messages[2];
+                    var QueueURI = QueueEvent["uri"].ToString();
+
+                    if (QueueURI == "/lol-lobby-team-builder/v1/lobby/countdown")
+                    {
+                        if (QueueEvent["data"]["phaseName"].ToString() == "MATCHMAKING" && ForcedPoroIcon == 0)
+                            Icon.SetToPoro(CurrentGameMode, out ForcedPoroIcon);
+                        break;
+                    }
+
+                    if (QueueURI != "/lol-lobby-team-builder/v1/lobby")
+                        break;
+
+                    var QueueEventType = QueueEvent["eventType"].ToString();
+                    Debug.WriteLine($"A queue event happened: {QueueEventType}");
+                    if (QueueEventType == "Delete")
+                    {
+                        Icon.ResetToDefault();
+                        ForcedPoroIcon = 0;
+                    }
+                    else if (ForcedPoroIcon == 0)
+                    {
+                        Icon.SetToPoro(CurrentGameMode, out ForcedPoroIcon);
+                    }
                     break;
 
                 case GameModeChangedEvent:
@@ -251,6 +280,10 @@ namespace PoroQueue
                             break;
                     }
                     GameModeUpdated?.Invoke(null, EventArgs.Empty);
+                    break;
+
+                case GameEvent:
+
                     break;
             }
         }

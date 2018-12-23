@@ -10,13 +10,17 @@ namespace PoroQueue
     {
         private static string LocalLocation = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PoroQueue", "Config.json");
 
-        public List<int> EnabledForURF = new List<int>();
-        public List<int> EnabledForARAM = new List<int>();
-        public List<int> EnabledForBlitz = new List<int>();
+        public class SummonerConfig
+        {
+            public List<int> EnabledForURF = new List<int>();
+            public List<int> EnabledForARAM = new List<int>();
+            public List<int> EnabledForBlitz = new List<int>();
 
-        public int URFIterator = 0;
-        public int ARAMIterator = 0;
-        public int BlitzIterator = 0;
+            public int URFIterator = 0;
+            public int ARAMIterator = 0;
+            public int BlitzIterator = 0;
+        };
+        public Dictionary<string, SummonerConfig> Entries = new Dictionary<string, SummonerConfig>();
 
         private static Config Instance = null;
         public static Config Current
@@ -38,64 +42,81 @@ namespace PoroQueue
             }
         }
 
+        public static string GetEntryIDForCurrentSummoner()
+        {
+            if (LeagueOfLegends.CurrentSummoner == null)
+                return "Default";
+
+            return LeagueOfLegends.CurrentSummoner.puuid;
+        }
+
         public void AddURFIcon(int IconID)
         {
-            if (EnabledForURF.Any(i => i == IconID))
+            string ID = GetEntryIDForCurrentSummoner();
+            if (Entries[ID].EnabledForURF.Any(i => i == IconID))
                 return;
 
-            EnabledForURF.Add(IconID);
+            Entries[ID].EnabledForURF.Add(IconID);
             Save();
         }
 
         public void RemoveURFIcon(int IconID)
         {
-            EnabledForURF.RemoveAll(i => i == IconID);
+            string ID = GetEntryIDForCurrentSummoner();
+            Entries[ID].EnabledForURF.RemoveAll(i => i == IconID);
             Save();
         }
 
         public void AddARAMIcon(int IconID)
         {
-            if (EnabledForARAM.Any(i => i == IconID))
+            string ID = GetEntryIDForCurrentSummoner();
+            if (Entries[ID].EnabledForARAM.Any(i => i == IconID))
                 return;
 
-            EnabledForARAM.Add(IconID);
+            Entries[ID].EnabledForARAM.Add(IconID);
             Save();
         }
 
         public void RemoveARAMIcon(int IconID)
         {
-            EnabledForARAM.RemoveAll(i => i == IconID);
+            string ID = GetEntryIDForCurrentSummoner();
+            Entries[ID].EnabledForARAM.RemoveAll(i => i == IconID);
             Save();
         }
 
         public void AddBlitzIcon(int IconID)
         {
-            if (EnabledForBlitz.Any(i => i == IconID))
+            string ID = GetEntryIDForCurrentSummoner();
+            if (Entries[ID].EnabledForBlitz.Any(i => i == IconID))
                 return;
 
-            EnabledForBlitz.Add(IconID);
+            Entries[ID].EnabledForBlitz.Add(IconID);
             Save();
         }
 
         public void RemoveBlitzIcon(int IconID)
         {
-            EnabledForBlitz.RemoveAll(i => i == IconID);
+            string ID = GetEntryIDForCurrentSummoner();
+            Entries[ID].EnabledForBlitz.RemoveAll(i => i == IconID);
             Save();
         }
 
         public bool IsEnabledForARAM(int IconID)
         {
-            return EnabledForARAM.Any(i => i == IconID);
+            string ID = GetEntryIDForCurrentSummoner();
+            return Entries[ID].EnabledForARAM.Any(i => i == IconID);
         }
 
         public bool IsEnabledForBlitz(int IconID)
         {
-            return EnabledForBlitz.Any(i => i == IconID);
+            string ID = GetEntryIDForCurrentSummoner();
+            return Entries[ID].EnabledForBlitz.Any(i => i == IconID);
         }
 
         public bool IsEnabledForURF(int IconID)
         {
-            return EnabledForURF.Any(i => i == IconID);
+            string ID = GetEntryIDForCurrentSummoner();
+            return Entries[ID].EnabledForURF.Any(i => i == IconID);
         }
 
         public void Save()

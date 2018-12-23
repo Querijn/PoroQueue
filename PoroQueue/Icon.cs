@@ -12,10 +12,16 @@ namespace PoroQueue
         private static string CacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PoroQueue", "Cache");
         private static EffectIcon[] AllowedIcons = null;
 
+        public static int Default = 0;
+
         static Icon()
         {
             if (!Directory.Exists(CacheDirectory))
                 Directory.CreateDirectory(CacheDirectory);
+
+            LeagueOfLegends.IconChanged += (s,e) => Default = LeagueOfLegends.CurrentSummoner.profileIconId;
+            LeagueOfLegends.LoggedIn += (s,e) => Default = LeagueOfLegends.CurrentSummoner.profileIconId;
+            LeagueOfLegends.Stopped += (s,e) => Default = 0;
         }
 
         public class EffectIcon
@@ -74,15 +80,66 @@ namespace PoroQueue
             return AllowedIcons;
         }
 
-        internal static int SetToPoro()
+        internal static void SetToPoro(LeagueOfLegends.GameMode Mode, out int IconID)
         {
+            string ID = Config.GetEntryIDForCurrentSummoner();
 
-            return 0;
+            int[] IconSet;
+            int Index;
+
+            switch (Mode)
+            {
+                default:
+                case LeagueOfLegends.GameMode.ARAM:
+                    IconSet = Config.Current.Entries[ID].EnabledForARAM.ToArray();
+                    Index = Config.Current.Entries[ID].ARAMIterator;
+                    break;
+
+                case LeagueOfLegends.GameMode.NexusBlitz:
+                    IconSet = Config.Current.Entries[ID].EnabledForBlitz.ToArray();
+                    Index = Config.Current.Entries[ID].BlitzIterator;
+                    break;
+
+                case LeagueOfLegends.GameMode.URF:
+                    IconSet = Config.Current.Entries[ID].EnabledForURF.ToArray();
+                    Index = Config.Current.Entries[ID].URFIterator;
+                    break;
+            }
+
+            if (Index >= IconSet.Length)
+                Index = 0;
+
+            Default = LeagueOfLegends.CurrentSummoner.profileIconId;
+            IconID = IconSet[Index];
+            Set(IconID);
+
+            switch (Mode)
+            {
+                default:
+                    return;
+
+                case LeagueOfLegends.GameMode.ARAM:
+                    Config.Current.Entries[ID].ARAMIterator++;
+                    break;
+
+                case LeagueOfLegends.GameMode.NexusBlitz:
+                    Config.Current.Entries[ID].BlitzIterator++;
+                    break;
+
+                case LeagueOfLegends.GameMode.URF:
+                    Config.Current.Entries[ID].URFIterator++;
+                    break;
+            }
         }
 
-        internal static void Set(int forcedPoroIcon)
+        internal static async void Set(int Icon)
         {
-            throw new NotImplementedException();
+            await Request.Put(LeagueOfLegends.APIDomain + "/lol-summoner/v1/current-summoner/icon", "{\"profileIconId\": " + Icon + "}");
+        }
+
+        internal static void ResetToDefault()
+        {
+            Set(Default);
         }
     }
 }
