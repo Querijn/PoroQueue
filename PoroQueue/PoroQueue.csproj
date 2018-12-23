@@ -55,7 +55,7 @@
     <Compile Include="LeagueOfLegends.cs" />
     <Compile Include="Requests\LobbyRequest.cs" />
     <Compile Include="Requests\MissionDataRequest.cs" />
-    <Compile Include="ProcessExtensions.cs" />
+    <Compile Include="Extensions\ProcessExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Requests\Base\Request.cs" />
     <Compile Include="Requests\Summoner.cs" />
