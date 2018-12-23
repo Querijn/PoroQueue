@@ -1,4 +1,6 @@
-﻿#define DEBUG_EVENTS
+﻿#if DEBUG
+#define DEBUG_EVENTS
+#endif
 
 using System;
 using System.Diagnostics;
@@ -42,7 +44,7 @@ namespace PoroQueue
         private static string DataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PoroQueue");
         private static FileSystemWatcher Watcher = new FileSystemWatcher();
         private static WebSocket Connection = null;
-        private static int ForcedPoroIcon = 0;
+        private static int ForcedPoroIcon = -1;
 
         private const string SummonerIconChangedEvent = "OnJsonApiEvent_lol-summoner_v1_current-summoner";
         private const string LoggedInEvent = "OnJsonApiEvent_lol-login_v1_login-data-packet";
@@ -226,7 +228,7 @@ namespace PoroQueue
 
                     if (CurrentSummoner.profileIconId != ForcedPoroIcon)
                         IconChanged?.Invoke(null, EventArgs.Empty);
-                    else if (ForcedPoroIcon != 0)
+                    else if (ForcedPoroIcon != -1)
                         Icon.Set(ForcedPoroIcon);
                     break;
 
@@ -236,7 +238,7 @@ namespace PoroQueue
 
                     if (QueueURI == "/lol-lobby-team-builder/v1/lobby/countdown")
                     {
-                        if (QueueEvent["data"]["phaseName"].ToString() == "MATCHMAKING" && ForcedPoroIcon == 0)
+                        if (QueueEvent["data"]["phaseName"].ToString() == "MATCHMAKING" && ForcedPoroIcon == -1)
                             Icon.SetToPoro(CurrentGameMode, out ForcedPoroIcon);
                         break;
                     }
@@ -249,9 +251,9 @@ namespace PoroQueue
                     if (QueueEventType == "Delete")
                     {
                         Icon.ResetToDefault();
-                        ForcedPoroIcon = 0;
+                        ForcedPoroIcon = -1;
                     }
-                    else if (ForcedPoroIcon == 0)
+                    else if (ForcedPoroIcon == -1)
                     {
                         Icon.SetToPoro(CurrentGameMode, out ForcedPoroIcon);
                     }
@@ -283,7 +285,6 @@ namespace PoroQueue
                     break;
 
                 case GameEvent:
-
                     break;
             }
         }

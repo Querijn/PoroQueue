@@ -12,7 +12,7 @@ namespace PoroQueue
         private static string CacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PoroQueue", "Cache");
         private static EffectIcon[] AllowedIcons = null;
 
-        public static int Default = 0;
+        public static int Default = -1;
 
         static Icon()
         {
