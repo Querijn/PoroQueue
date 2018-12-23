@@ -50,8 +50,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Config.cs" />
     <Compile Include="Icon.cs" />
-    <Compile Include="LobbyMatchmakingEvent.cs" />
+    <Compile Include="Events\LobbyCreateEvent.cs" />
+    <Compile Include="Events\LobbyMatchmakingEvent.cs" />
     <Compile Include="Requests\Base\JSONRequest.cs" />
     <Compile Include="LeagueOfLegends.cs" />
     <Compile Include="Requests\LobbyRequest.cs" />

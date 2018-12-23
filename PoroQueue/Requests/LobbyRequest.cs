@@ -116,7 +116,14 @@ namespace PoroQueue
 
         public static async Task<LobbyRequest> Get()
         {
-            return await JSONRequest.Get<LobbyRequest>(LeagueOfLegends.APIDomain + "/lol-lobby/v2/lobby");
+            try
+            {
+                return await JSONRequest.Get<LobbyRequest>(LeagueOfLegends.APIDomain + "/lol-lobby/v2/lobby");
+            }
+            catch (System.Net.Http.HttpRequestException)
+            {
+                return null;
+            }
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿using System;
+﻿#define DEBUG_EVENTS
+
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -8,22 +10,34 @@ using WebSocketSharp;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
 namespace PoroQueue
 {
     public static class LeagueOfLegends
     {
+        public enum GameMode
+        {
+            Unknown = -1,
+            ARAM = 0,
+            NexusBlitz = 1,
+            URF = 2,
+            Classic = 3
+        };
+
         public static event EventHandler Started;
         public static event EventHandler Stopped;
         public static event EventHandler LoggedIn;
         public static event EventHandler LoggedOut;
         public static event EventHandler IconChanged;
+        public static event EventHandler GameModeUpdated;
 
         public static bool IsActive { get; private set; }
         public static bool IsLoggedIn { get; private set; }
         public static Summoner CurrentSummoner { get; private set; }
         public static string APIDomain { get; private set; }
         public static string LatestVersion { get; private set; }
+        public static LeagueOfLegends.GameMode CurrentGameMode { get; private set; }
 
         private static string DataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PoroQueue");
         private static FileSystemWatcher Watcher = new FileSystemWatcher();
@@ -33,6 +47,7 @@ namespace PoroQueue
         private const string SummonerIconChangedEvent = "OnJsonApiEvent_lol-summoner_v1_current-summoner";
         private const string LoggedInEvent = "OnJsonApiEvent_lol-login_v1_login-data-packet";
         private const string QueueUpEvent = "OnJsonApiEvent_lol-lobby-team-builder_v1_lobby";
+        private const string GameModeChangedEvent = "OnJsonApiEvent_lol-lobby_v2_lobby";
 
 #if DEBUG_EVENTS
         class DebugEventHelper
@@ -130,6 +145,7 @@ namespace PoroQueue
 #if !DEBUG_EVENTS
             Connection.Send("[5,\"" + SummonerIconChangedEvent + "\"]");
             Connection.Send("[5,\"" + QueueUpEvent + "\"]");
+            Connection.Send("[5,\"" + GameModeChangedEvent + "\"]");
 #else
             var HelpDocument = JsonConvert.DeserializeObject<DebugEventHelper>(AllEventsText);
             foreach (var EventName in HelpDocument.events)
@@ -144,6 +160,10 @@ namespace PoroQueue
             try
             {
                 CurrentSummoner = await Summoner.GetCurrent();
+
+                var Lobby = await LobbyRequest.Get();
+                SetGameModeFromString(Lobby != null ? Lobby.gameConfig.gameMode : "UNKNOWN");
+
                 IsLoggedIn = true;
                 LoggedIn?.Invoke(null, EventArgs.Empty);
             }
@@ -159,7 +179,7 @@ namespace PoroQueue
 
         private static async void OnWebsocketMessage(object sender, MessageEventArgs e)
         {
-            var Messages = JsonConvert.DeserializeObject<object[]>(e.Data);
+            var Messages = JArray.Parse(e.Data);
 
             int MessageType = 0;
             if (!int.TryParse(Messages[0].ToString(), out MessageType) || MessageType != 8)
@@ -178,6 +198,9 @@ namespace PoroQueue
                         try
                         {
                             CurrentSummoner = await Summoner.GetCurrent();
+                            var Lobby = await LobbyRequest.Get();
+                            SetGameModeFromString(Lobby != null ? Lobby.gameConfig.gameMode : "UNKNOWN");
+
                             IsLoggedIn = true;
                             LoggedIn?.Invoke(null, EventArgs.Empty);
                             break;
@@ -203,6 +226,53 @@ namespace PoroQueue
                 case QueueUpEvent:
                     var Message = JsonConvert.DeserializeObject<LobbyMatchmakingEvent>(Messages[2].ToString());
                     ForcedPoroIcon = Icon.SetToPoro();
+                    break;
+
+                case GameModeChangedEvent:
+                    var EventContainer = Messages[2];
+                    if (EventContainer["uri"].ToString() != "/lol-lobby/v2/lobby")
+                        break;
+                    var EventType = EventContainer["eventType"].ToString();
+                    Debug.WriteLine(EventType);
+                    switch (EventType)
+                    {
+                        case "Create":
+                            var LobbyCreatedEvent = JsonConvert.DeserializeObject<LobbyCreateEvent>(Messages[2].ToString());
+                            SetGameModeFromString(LobbyCreatedEvent.data.gameConfig.gameMode);
+                            break;
+
+                        case "Delete":
+                            CurrentGameMode = LeagueOfLegends.GameMode.Unknown;
+                            break;
+
+                        case "Update":
+                            var LobbyUpdatedEvent = JsonConvert.DeserializeObject<LobbyCreateEvent>(Messages[2].ToString());
+                            SetGameModeFromString(LobbyUpdatedEvent.data.gameConfig.gameMode);
+                            break;
+                    }
+                    GameModeUpdated?.Invoke(null, EventArgs.Empty);
+                    break;
+            }
+        }
+
+        private static void SetGameModeFromString(string GameMode)
+        {
+            switch (GameMode)
+            {
+                default:
+                    CurrentGameMode = LeagueOfLegends.GameMode.Unknown;
+                    break;
+
+                case "CLASSIC":
+                    CurrentGameMode = LeagueOfLegends.GameMode.Classic;
+                    break;
+
+                case "GAMEMODEX":
+                    CurrentGameMode = LeagueOfLegends.GameMode.NexusBlitz;
+                    break;
+
+                case "ARAM":
+                    CurrentGameMode = LeagueOfLegends.GameMode.ARAM;
                     break;
             }
         }
