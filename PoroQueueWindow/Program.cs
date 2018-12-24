@@ -36,7 +36,11 @@ namespace PoroQueueWindow
         private static void ShowSettings()
         {
             if (SettingsMenu.Visible)
+            {
                 SettingsMenu.BringToFront();
+                SettingsMenu.Activate();
+                SettingsMenu.Focus();
+            }
             else SettingsMenu.Show();
         }
 
@@ -45,8 +49,8 @@ namespace PoroQueueWindow
             StartOnBootMenuItem = new MenuItem("Start with Windows", (s, e) => ToggleStartOnBoot());
             StartOnBootMenuItem.Checked = WillStartOnBoot;
 
-            TrayIcon.DoubleClick += (s, e) => SettingsMenu.Show();
-            var SettingsMenuItem = new MenuItem("Settings", (s, e) => SettingsMenu.Show());
+            TrayIcon.DoubleClick += (s, e) => ShowSettings();
+            var SettingsMenuItem = new MenuItem("Settings", (s, e) => ShowSettings());
 
             var QuitMenuItem = new MenuItem("Quit", (a, b) =>
             {
