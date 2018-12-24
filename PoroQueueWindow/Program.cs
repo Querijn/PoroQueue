@@ -33,18 +33,24 @@ namespace PoroQueueWindow
             Application.Run();
         }
 
+        private static void ShowSettings()
+        {
+            if (SettingsMenu.Visible)
+                SettingsMenu.BringToFront();
+            else SettingsMenu.Show();
+        }
+
         private static void UpdateMenuItems()
         {
             StartOnBootMenuItem = new MenuItem("Start with Windows", (s, e) => ToggleStartOnBoot());
             StartOnBootMenuItem.Checked = WillStartOnBoot;
 
-            var SettingsMenuItem = new MenuItem("Settings", (a, b) =>
-            {
-                SettingsMenu.Show();
-            });
+            TrayIcon.DoubleClick += (s, e) => SettingsMenu.Show();
+            var SettingsMenuItem = new MenuItem("Settings", (s, e) => SettingsMenu.Show());
 
             var QuitMenuItem = new MenuItem("Quit", (a, b) =>
             {
+                TrayIcon.Dispose();
                 if (Application.MessageLoop)
                     Application.Exit();
                 else
