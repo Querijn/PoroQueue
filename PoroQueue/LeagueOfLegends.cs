@@ -1,5 +1,5 @@
 ﻿#if DEBUG
-#define DEBUG_EVENTS
+//#define DEBUG_EVENTS
 #endif
 
 using System;
@@ -61,6 +61,8 @@ namespace PoroQueue
 
         static LeagueOfLegends()
         {
+            Icon.Init();
+
             APIDomain = null;
             LatestVersion = "8.24.1";
 
@@ -155,6 +157,7 @@ namespace PoroQueue
             Connection.Send("[5,\"" + SummonerIconChangedEvent + "\"]");
             Connection.Send("[5,\"" + QueueUpEvent + "\"]");
             Connection.Send("[5,\"" + GameModeChangedEvent + "\"]");
+            Connection.Send("[5,\"" + GameEvent + "\"]");
 #else
             var HelpDocument = JsonConvert.DeserializeObject<DebugEventHelper>(File.ReadAllText("events.json"));
             foreach (var EventName in HelpDocument.events)
@@ -175,6 +178,7 @@ namespace PoroQueue
 
                 IsLoggedIn = true;
                 LoggedIn?.Invoke(null, EventArgs.Empty);
+                IconChanged?.Invoke(null, EventArgs.Empty);
             }
 
             // We aren't logged in!
@@ -212,6 +216,7 @@ namespace PoroQueue
 
                             IsLoggedIn = true;
                             LoggedIn?.Invoke(null, EventArgs.Empty);
+                            IconChanged?.Invoke(null, EventArgs.Empty);
                             break;
                         }
 
@@ -228,7 +233,7 @@ namespace PoroQueue
 
                     if (CurrentSummoner.profileIconId != ForcedPoroIcon)
                         IconChanged?.Invoke(null, EventArgs.Empty);
-                    else if (ForcedPoroIcon != -1)
+                    else if (ForcedPoroIcon != -1 && CurrentSummoner.profileIconId != ForcedPoroIcon)
                         Icon.Set(ForcedPoroIcon);
                     break;
 
@@ -236,10 +241,10 @@ namespace PoroQueue
                     var QueueEvent = Messages[2];
                     var QueueURI = QueueEvent["uri"].ToString();
 
-                    if (QueueURI == "/lol-lobby-team-builder/v1/lobby/countdown")
+                    if (QueueURI == "/lol-lobby-team-builder/v1/lobby/countdown" && QueueEvent["data"]["phaseName"].ToString() == "MATCHMAKING")
                     {
-                        if (QueueEvent["data"]["phaseName"].ToString() == "MATCHMAKING")
-                            Icon.SetToPoro(CurrentGameMode, out ForcedPoroIcon);
+                        Debug.WriteLine("Noticed start of matchmaking, setting poro icon.");
+                        Icon.SetToPoro(CurrentGameMode, out ForcedPoroIcon);
                         break;
                     }
 
@@ -247,7 +252,7 @@ namespace PoroQueue
                         break;
 
                     var QueueEventType = QueueEvent["eventType"].ToString();
-                    Debug.WriteLine($"A queue event happened: {QueueEventType}");
+                    Debug.WriteLine($"QueueUpEvent: {QueueEventType}");
                     if (QueueEventType == "Delete")
                     {
                         Icon.ResetToDefault();
@@ -264,7 +269,7 @@ namespace PoroQueue
                     if (EventContainer["uri"].ToString() != "/lol-lobby/v2/lobby")
                         break;
                     var EventType = EventContainer["eventType"].ToString();
-                    Debug.WriteLine(EventType);
+                    Debug.WriteLine("GameModeChangedEvent: " + EventType);
                     switch (EventType)
                     {
                         case "Create":
@@ -289,11 +294,14 @@ namespace PoroQueue
                     var GameURI = GameEventData["uri"].ToString();
                     if (GameURI != "/lol-gameflow/v1/session")
                         break;
-
-                    if (GameEventData["data"] == null && GameEventData["data"]["gameData"] == null)
+                    
+                    if (GameEventData["data"] == null)
                         break;
 
-                    Icon.ResetToDefault();
+                    var Phase = GameEventData["data"]["phase"].ToString();
+                    Debug.WriteLine("Current GameFlow phase: " + Phase);
+                    if (Phase == "InProgress")
+                        Icon.ResetToDefault();
                     break;
             }
         }
@@ -318,6 +326,8 @@ namespace PoroQueue
                     CurrentGameMode = LeagueOfLegends.GameMode.ARAM;
                     break;
             }
+
+            Debug.WriteLine("Detected as playing " + CurrentGameMode.ToString());
         }
 
         private static string LockFileLocation

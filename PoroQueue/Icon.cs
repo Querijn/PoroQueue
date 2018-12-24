@@ -13,7 +13,12 @@ namespace PoroQueue
         private static string CacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PoroQueue", "Cache");
         private static EffectIcon[] AllowedIcons = null;
 
-        public static int Default = -1;
+        private static int DefaultID = -1;
+        public static int Default
+        {
+            get { return DefaultID; }
+            private set { DefaultID = value; Debug.WriteLine("Default icon = " + value); }
+        }
 
         static Icon()
         {
@@ -22,7 +27,11 @@ namespace PoroQueue
 
             LeagueOfLegends.IconChanged += (s,e) => Default = LeagueOfLegends.CurrentSummoner.profileIconId;
             LeagueOfLegends.LoggedIn += (s,e) => Default = LeagueOfLegends.CurrentSummoner.profileIconId;
-            LeagueOfLegends.Stopped += (s,e) => Default = 0;
+            LeagueOfLegends.Stopped += (s,e) => Default = -1;
+        }
+
+        public static void Init()
+        {
         }
 
         public class EffectIcon
@@ -84,7 +93,6 @@ namespace PoroQueue
         internal static void SetToPoro(LeagueOfLegends.GameMode Mode, out int IconID)
         {
             string ID = Config.Current.GetEntryIDForCurrentSummoner();
-            Default = LeagueOfLegends.CurrentSummoner.profileIconId;
 
             int[] IconSet;
             int Index;
@@ -92,7 +100,7 @@ namespace PoroQueue
             switch (Mode)
             {
                 default:
-                    IconID = Default;
+                    IconID = -1;
                     return;
 
                 case LeagueOfLegends.GameMode.ARAM:
@@ -110,18 +118,18 @@ namespace PoroQueue
                     Index = Config.Current.Entries[ID].URFIterator;
                     break;
             }
-
-            if (IconSet.Length == 0)
-            {
-                IconID = Default;
-                return;
-            }
-
+            
             if (Index >= IconSet.Length)
                 Index = 0;
 
+            if (IconSet.Length == 0 || IconSet[Index] == LeagueOfLegends.CurrentSummoner.profileIconId)
+            {
+                IconID = -1;
+                return;
+            }
             
             IconID = IconSet[Index];
+            Debug.WriteLine("Setting Poro Icon " + IconID);
             Set(IconID);
 
             switch (Mode)
@@ -145,11 +153,21 @@ namespace PoroQueue
 
         internal static async void Set(int Icon)
         {
-            Debug.WriteLine(await Request.Put(LeagueOfLegends.APIDomain + "/lol-summoner/v1/current-summoner/icon", "{\"profileIconId\": " + Icon + "}"));
+            await Request.Put(LeagueOfLegends.APIDomain + "/lol-summoner/v1/current-summoner/icon", "{\"profileIconId\": " + Icon + "}");
         }
 
         internal static void ResetToDefault()
         {
+            if (Default == -1)
+            {
+                Debug.WriteLine("Got a request to reset to default icon, but we haven't set one.");
+                return;
+            }
+
+            if (Default == LeagueOfLegends.CurrentSummoner.profileIconId)
+                return;
+
+            Debug.WriteLine("Resetting Icon to default ID " + Default);
             Set(Default);
         }
     }
