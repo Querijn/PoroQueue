@@ -238,7 +238,7 @@ namespace PoroQueue
 
                     if (QueueURI == "/lol-lobby-team-builder/v1/lobby/countdown")
                     {
-                        if (QueueEvent["data"]["phaseName"].ToString() == "MATCHMAKING" && ForcedPoroIcon == -1)
+                        if (QueueEvent["data"]["phaseName"].ToString() == "MATCHMAKING")
                             Icon.SetToPoro(CurrentGameMode, out ForcedPoroIcon);
                         break;
                     }
@@ -285,6 +285,15 @@ namespace PoroQueue
                     break;
 
                 case GameEvent:
+                    var GameEventData = Messages[2];
+                    var GameURI = GameEventData["uri"].ToString();
+                    if (GameURI != "/lol-gameflow/v1/session")
+                        break;
+
+                    if (GameEventData["data"] == null && GameEventData["data"]["gameData"] == null)
+                        break;
+
+                    Icon.ResetToDefault();
                     break;
             }
         }

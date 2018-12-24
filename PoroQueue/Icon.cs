@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Net;
@@ -83,6 +84,7 @@ namespace PoroQueue
         internal static void SetToPoro(LeagueOfLegends.GameMode Mode, out int IconID)
         {
             string ID = Config.Current.GetEntryIDForCurrentSummoner();
+            Default = LeagueOfLegends.CurrentSummoner.profileIconId;
 
             int[] IconSet;
             int Index;
@@ -90,6 +92,9 @@ namespace PoroQueue
             switch (Mode)
             {
                 default:
+                    IconID = Default;
+                    return;
+
                 case LeagueOfLegends.GameMode.ARAM:
                     IconSet = Config.Current.Entries[ID].EnabledForARAM.ToArray();
                     Index = Config.Current.Entries[ID].ARAMIterator;
@@ -106,7 +111,6 @@ namespace PoroQueue
                     break;
             }
 
-            Default = LeagueOfLegends.CurrentSummoner.profileIconId;
             if (IconSet.Length == 0)
             {
                 IconID = Default;
@@ -141,7 +145,7 @@ namespace PoroQueue
 
         internal static async void Set(int Icon)
         {
-            await Request.Put(LeagueOfLegends.APIDomain + "/lol-summoner/v1/current-summoner/icon", "{\"profileIconId\": " + Icon + "}");
+            Debug.WriteLine(await Request.Put(LeagueOfLegends.APIDomain + "/lol-summoner/v1/current-summoner/icon", "{\"profileIconId\": " + Icon + "}"));
         }
 
         internal static void ResetToDefault()

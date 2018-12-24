@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -23,12 +24,14 @@ namespace PoroQueueWindow
             public int IconID;
         };
         Dictionary<int, IconSet> IconElements = new Dictionary<int, IconSet>();
+
         Image DefaultImage;
         SynchronizationContext UIThread;
 
         public Main()
         {
             InitializeComponent();
+
             DefaultImage = DefaultIcon.Image;
             UIThread = SynchronizationContext.Current;
 
@@ -235,6 +238,18 @@ namespace PoroQueueWindow
             {
                 // Debug.Break();
             }
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (e.CloseReason == CloseReason.WindowsShutDown)
+            {
+                base.OnFormClosing(e);
+                return;
+            }
+
+            e.Cancel = true;
+            Hide();
         }
     }
 }
