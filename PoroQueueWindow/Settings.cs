@@ -12,7 +12,7 @@ using System.Windows.Forms;
 
 namespace PoroQueueWindow
 {
-    public partial class Main : Form
+    public partial class Settings : Form
     {
         class IconSet
         {
@@ -28,7 +28,7 @@ namespace PoroQueueWindow
         Image DefaultImage;
         SynchronizationContext UIThread;
 
-        public Main()
+        public Settings()
         {
             InitializeComponent();
 
@@ -60,6 +60,7 @@ namespace PoroQueueWindow
             await SetupIcons();
 
             SyncSettingsCheckbox.Enabled = true;
+            SyncSettingsCheckbox.Checked = PoroQueue.Config.Current.Summoner.WantsServerSync && PoroQueue.Config.Current.Summoner.UnderstandsServerSync;
 
             PoroQueue.LeagueOfLegends.IconChanged += (s,e) => UIThread.Post(async o => await SetCurrentIcon(), null);
 

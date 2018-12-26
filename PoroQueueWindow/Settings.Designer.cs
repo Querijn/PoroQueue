@@ -1,6 +1,6 @@
 ﻿namespace PoroQueueWindow
 {
-    partial class Main
+    partial class Settings
     {
         /// <summary>
         /// Required designer variable.
@@ -28,7 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Main));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Settings));
             this.IconGroup = new System.Windows.Forms.GroupBox();
             this.DefaultIconLabel = new System.Windows.Forms.Label();
             this.SyncSettingsCheckbox = new System.Windows.Forms.CheckBox();
