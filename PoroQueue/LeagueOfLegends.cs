@@ -35,7 +35,7 @@ namespace PoroQueue
         public static event EventHandler GameModeUpdated;
 
         public static bool IsActive { get; private set; }
-        public static bool IsLoggedIn { get; private set; }
+        public static bool IsLoggedIn { get { return CurrentSummoner != null; } }
         public static Summoner CurrentSummoner { get; private set; }
         public static string APIDomain { get; private set; }
         public static string LatestVersion { get; private set; }
@@ -176,7 +176,6 @@ namespace PoroQueue
                 var Lobby = await LobbyRequest.Get();
                 SetGameModeFromString(Lobby != null ? Lobby.gameConfig.gameMode : "UNKNOWN");
 
-                IsLoggedIn = true;
                 LoggedIn?.Invoke(null, EventArgs.Empty);
                 IconChanged?.Invoke(null, EventArgs.Empty);
             }
@@ -214,7 +213,6 @@ namespace PoroQueue
                             var Lobby = await LobbyRequest.Get();
                             SetGameModeFromString(Lobby != null ? Lobby.gameConfig.gameMode : "UNKNOWN");
 
-                            IsLoggedIn = true;
                             LoggedIn?.Invoke(null, EventArgs.Empty);
                             IconChanged?.Invoke(null, EventArgs.Empty);
                             break;
@@ -350,7 +348,14 @@ namespace PoroQueue
                 if (File.Exists(TempFile))
                     File.Delete(TempFile);
 
-                File.Copy(LockFileLocation, TempFile);
+                try
+                {
+                    File.Copy(LockFileLocation, TempFile);
+                }
+                catch
+                {
+                }
+
                 LockFileCache = File.ReadAllText(TempFile, Encoding.UTF8);
                 File.Delete(TempFile);
                 return LockFileCache;
