@@ -63,12 +63,14 @@
             // SyncSettingsCheckbox
             // 
             this.SyncSettingsCheckbox.AutoSize = true;
+            this.SyncSettingsCheckbox.Enabled = false;
             this.SyncSettingsCheckbox.Location = new System.Drawing.Point(16, 134);
             this.SyncSettingsCheckbox.Name = "SyncSettingsCheckbox";
             this.SyncSettingsCheckbox.Size = new System.Drawing.Size(89, 17);
             this.SyncSettingsCheckbox.TabIndex = 2;
             this.SyncSettingsCheckbox.Text = "Sync settings";
             this.SyncSettingsCheckbox.UseVisualStyleBackColor = true;
+            this.SyncSettingsCheckbox.CheckedChanged += new System.EventHandler(this.SyncToServerChecked);
             // 
             // statusStrip1
             // 

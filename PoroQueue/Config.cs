@@ -3,11 +3,16 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace PoroQueue
 {
     public class Config
     {
+        private const string WriteURL = "https://querijn.codes/poro_queue/write/";
+        private const string ReadURL = "https://querijn.codes/poro_queue/read/";
+        private const string DeleteURL = "https://querijn.codes/poro_queue/delete/";
+
         private static string LocalLocation = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PoroQueue", "Config.json");
 
         public class SummonerConfig
@@ -19,9 +24,12 @@ namespace PoroQueue
             public int URFIterator = 0;
             public int ARAMIterator = 0;
             public int BlitzIterator = 0;
+
+            public bool UnderstandsServerSync = false;
+            public bool WantsServerSync = false;
         };
         public Dictionary<string, SummonerConfig> Entries = new Dictionary<string, SummonerConfig>();
-
+        
         private static Config Instance = null;
         public static Config Current
         {
@@ -42,7 +50,54 @@ namespace PoroQueue
             }
         }
 
-        public string GetEntryIDForCurrentSummoner()
+        public SummonerConfig Summoner
+        {
+            get
+            {
+                return Entries[GetEntryIDForCurrentSummonerSync()];
+            }
+        }
+
+        private List<string> LookedUpSummoners = new List<string>();
+        public async Task<string> GetEntryIDForCurrentSummoner()
+        {
+            if (LeagueOfLegends.CurrentSummoner == null)
+                return "Default";
+
+            if (LookedUpSummoners.Any(s => s == LeagueOfLegends.CurrentSummoner.puuid) == false)
+            {
+                SummonerConfig Result;
+                try
+                {
+                    var URL = $"{ReadURL}?p={LeagueOfLegends.CurrentSummoner.puuid}";
+                    Result = await JSONRequest.Get<SummonerConfig>(URL);
+                    
+                    if (Result != null)
+                    {
+                        if (!Entries.Any(e => e.Key == LeagueOfLegends.CurrentSummoner.puuid))
+                            Entries.Add(LeagueOfLegends.CurrentSummoner.puuid, Result);
+                        else Entries[LeagueOfLegends.CurrentSummoner.puuid] = Result;
+                    }
+                    
+                }
+                catch (System.Net.Http.HttpRequestException e)
+                {
+                    int i = 0; i++;
+                }
+
+                LookedUpSummoners.Add(LeagueOfLegends.CurrentSummoner.puuid);
+            }
+
+            if (!Entries.Any(e => e.Key == LeagueOfLegends.CurrentSummoner.puuid))
+            {
+                Entries.Add(LeagueOfLegends.CurrentSummoner.puuid, new SummonerConfig());
+                Save();
+            }
+
+            return LeagueOfLegends.CurrentSummoner.puuid;
+        }
+
+        public string GetEntryIDForCurrentSummonerSync()
         {
             if (LeagueOfLegends.CurrentSummoner == null)
                 return "Default";
@@ -56,78 +111,96 @@ namespace PoroQueue
             return LeagueOfLegends.CurrentSummoner.puuid;
         }
 
-        public void AddURFIcon(int IconID)
+        public async void AddURFIcon(int IconID)
         {
-            string ID = GetEntryIDForCurrentSummoner();
-            if (Entries[ID].EnabledForURF.Any(i => i == IconID))
-                return;
-
+            string ID = await GetEntryIDForCurrentSummoner();
             Entries[ID].EnabledForURF.Add(IconID);
             Save();
         }
 
-        public void RemoveURFIcon(int IconID)
+        public async void RemoveURFIcon(int IconID)
         {
-            string ID = GetEntryIDForCurrentSummoner();
+            string ID = await GetEntryIDForCurrentSummoner();
             Entries[ID].EnabledForURF.RemoveAll(i => i == IconID);
             Save();
         }
 
-        public void AddARAMIcon(int IconID)
+        public async void AddARAMIcon(int IconID)
         {
-            string ID = GetEntryIDForCurrentSummoner();
-            if (Entries[ID].EnabledForARAM.Any(i => i == IconID))
-                return;
-
+            string ID = await GetEntryIDForCurrentSummoner();
             Entries[ID].EnabledForARAM.Add(IconID);
             Save();
         }
 
-        public void RemoveARAMIcon(int IconID)
+        public async void RemoveARAMIcon(int IconID)
         {
-            string ID = GetEntryIDForCurrentSummoner();
+            string ID = await GetEntryIDForCurrentSummoner();
             Entries[ID].EnabledForARAM.RemoveAll(i => i == IconID);
             Save();
         }
 
-        public void AddBlitzIcon(int IconID)
+        public async void AddBlitzIcon(int IconID)
         {
-            string ID = GetEntryIDForCurrentSummoner();
-            if (Entries[ID].EnabledForBlitz.Any(i => i == IconID))
-                return;
-
+            string ID = await GetEntryIDForCurrentSummoner();
             Entries[ID].EnabledForBlitz.Add(IconID);
             Save();
         }
 
-        public void RemoveBlitzIcon(int IconID)
+        public async void RemoveBlitzIcon(int IconID)
         {
-            string ID = GetEntryIDForCurrentSummoner();
+            string ID = await GetEntryIDForCurrentSummoner();
             Entries[ID].EnabledForBlitz.RemoveAll(i => i == IconID);
             Save();
         }
 
-        public bool IsEnabledForARAM(int IconID)
+        public async Task<bool> IsEnabledForARAM(int IconID)
         {
-            string ID = GetEntryIDForCurrentSummoner();
+            string ID = await GetEntryIDForCurrentSummoner();
             return Entries[ID].EnabledForARAM.Any(i => i == IconID);
         }
 
-        public bool IsEnabledForBlitz(int IconID)
+        public async Task<bool> IsEnabledForBlitz(int IconID)
         {
-            string ID = GetEntryIDForCurrentSummoner();
+            string ID = await GetEntryIDForCurrentSummoner();
             return Entries[ID].EnabledForBlitz.Any(i => i == IconID);
         }
 
-        public bool IsEnabledForURF(int IconID)
+        public async Task<bool> IsEnabledForURF(int IconID)
         {
-            string ID = GetEntryIDForCurrentSummoner();
+            string ID = await GetEntryIDForCurrentSummoner();
             return Entries[ID].EnabledForURF.Any(i => i == IconID);
         }
 
-        public void Save()
+        public async void Save()
         {
+            foreach (var Entry in Entries)
+            {
+                Entry.Value.EnabledForURF = Entry.Value.EnabledForURF.Distinct().ToList();
+                Entry.Value.EnabledForARAM = Entry.Value.EnabledForARAM.Distinct().ToList();
+                Entry.Value.EnabledForBlitz = Entry.Value.EnabledForBlitz.Distinct().ToList();
+
+                Entry.Value.EnabledForURF.Sort();
+                Entry.Value.EnabledForARAM.Sort();
+                Entry.Value.EnabledForBlitz.Sort();
+            }
+
             File.WriteAllText(LocalLocation, JsonConvert.SerializeObject(this));
+
+            if (Summoner != null && Summoner.UnderstandsServerSync)
+            {
+                var S = LeagueOfLegends.CurrentSummoner;
+                if (!Summoner.WantsServerSync)
+                    await JSONRequest.Get<bool>($"{DeleteURL}?p={S.puuid}");
+
+                var IconsARAM = string.Join(",", Summoner.EnabledForARAM);
+                var IconsBlitz = string.Join(",", Summoner.EnabledForBlitz);
+                var IconsURF = string.Join(",", Summoner.EnabledForURF);
+                await Request.Get($"{WriteURL}?p={S.puuid}" +
+                    $"&a={IconsARAM}&ai={Summoner.ARAMIterator}" +
+                    $"&b={IconsBlitz}&bi={Summoner.BlitzIterator}" +
+                    $"&u={IconsURF}&ui={Summoner.URFIterator}");
+            }
+            
         }
     }
 }

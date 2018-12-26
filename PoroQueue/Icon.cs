@@ -92,7 +92,7 @@ namespace PoroQueue
 
         internal static void SetToPoro(LeagueOfLegends.GameMode Mode, out int IconID)
         {
-            string ID = Config.Current.GetEntryIDForCurrentSummoner();
+            string ID = Config.Current.GetEntryIDForCurrentSummonerSync();
 
             int[] IconSet;
             int Index;

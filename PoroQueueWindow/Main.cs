@@ -59,6 +59,8 @@ namespace PoroQueueWindow
             await SetCurrentIcon();
             await SetupIcons();
 
+            SyncSettingsCheckbox.Enabled = true;
+
             PoroQueue.LeagueOfLegends.IconChanged += (s,e) => UIThread.Post(async o => await SetCurrentIcon(), null);
 
             IconGroup.Resize += async (a, b) => await SetupIcons();
@@ -69,6 +71,7 @@ namespace PoroQueueWindow
             UpdateLeagueStatus();
             DefaultIcon.Image = DefaultImage;
             IconGroup.Controls.Clear();
+            SyncSettingsCheckbox.Enabled = false;
         }
 
         private void UpdateLeagueStatus()
@@ -96,7 +99,7 @@ namespace PoroQueueWindow
 
             }
             else if (PoroQueue.LeagueOfLegends.IsActive)
-                LeagueStatus.Text = "League of Legends is active!";
+                LeagueStatus.Text = "Waiting for your login..";
             else
                 LeagueStatus.Text = "Waiting for League of Legends..";
         }
@@ -156,7 +159,7 @@ namespace PoroQueueWindow
                                 Name = "ARAMEnabled " + Icon,
                                 Text = "ARAM",
                                 Location = new Point(0, 103 + CheckboxY),
-                                Checked = PoroQueue.Config.Current.IsEnabledForARAM(Element.IconID)
+                                Checked = await PoroQueue.Config.Current.IsEnabledForARAM(Element.IconID)
                             };
 
                             Element.EnableARAM.CheckedChanged += (object s, EventArgs e) =>
@@ -178,7 +181,7 @@ namespace PoroQueueWindow
                                 Name = "BlitzEnabled " + Icon,
                                 Text = "Nexus Blitz",
                                 Location = new Point(0, 103 + CheckboxY),
-                                Checked = PoroQueue.Config.Current.IsEnabledForBlitz(Element.IconID)
+                                Checked = await PoroQueue.Config.Current.IsEnabledForBlitz(Element.IconID)
                             };
 
                             Element.EnableBlitz.CheckedChanged += (object s, EventArgs e) =>
@@ -200,7 +203,7 @@ namespace PoroQueueWindow
                                 Name = "URFEnabled " + Icon,
                                 Text = "URF",
                                 Location = new Point(0, 103 + CheckboxY),
-                                Checked = PoroQueue.Config.Current.IsEnabledForURF(Element.IconID)
+                                Checked = await PoroQueue.Config.Current.IsEnabledForURF(Element.IconID)
                             };
 
                             Element.EnableUrf.CheckedChanged += (object s, EventArgs e) =>
@@ -250,6 +253,32 @@ namespace PoroQueueWindow
 
             e.Cancel = true;
             Hide();
+        }
+
+        private void SyncToServerChecked(object sender, EventArgs e)
+        {
+            if (PoroQueue.LeagueOfLegends.CurrentSummoner == null)
+                return;
+
+            if (SyncSettingsCheckbox.Checked && PoroQueue.Config.Current.Summoner.UnderstandsServerSync == false)
+            {
+                DialogResult Result = MessageBox.Show("This option will send your config to the server and automatically load it on any computer you play.\n" +
+                    "\n" +
+                    "This will store no identifiable information other than your PUUID (" + PoroQueue.LeagueOfLegends.CurrentSummoner.puuid + ") and the poro icons you enabled.\n" +
+                    "\n" +
+                    "Would you like to turn this on?", "Sync Settings", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+
+                if (Result == DialogResult.Yes)
+                {
+                    PoroQueue.Config.Current.Summoner.UnderstandsServerSync = true;
+                    PoroQueue.Config.Current.Summoner.WantsServerSync = true;
+                    PoroQueue.Config.Current.Save();
+                }
+                return;
+            }
+
+            PoroQueue.Config.Current.Summoner.WantsServerSync = SyncSettingsCheckbox.Checked;
+            PoroQueue.Config.Current.Save();
         }
     }
 }
