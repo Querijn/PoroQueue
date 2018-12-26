@@ -18,19 +18,29 @@ namespace PoroQueueWindow
         [STAThread]
         static void Main()
         {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            SettingsMenu = new Settings();
-
-            TrayIcon = new NotifyIcon()
+            try
             {
-                Icon = Properties.Resources.PoroIcon,
-                Visible = true,
-                BalloonTipTitle = "Poro Queue"
-            };
-            UpdateMenuItems();
+                using (new SingleGlobalInstance(500)) // Wait 500 seconds max for other programs to stop
+                {
+                    Application.EnableVisualStyles();
+                    Application.SetCompatibleTextRenderingDefault(false);
+                    SettingsMenu = new Settings();
 
-            Application.Run();
+                    TrayIcon = new NotifyIcon()
+                    {
+                        Icon = Properties.Resources.PoroIcon,
+                        Visible = true,
+                        BalloonTipTitle = "Poro Queue"
+                    };
+                    UpdateMenuItems();
+
+                    Application.Run();
+                }
+            }
+            catch (TimeoutException)
+            {
+                MessageBox.Show("PoroQueue is already running!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+            }
         }
 
         private static void ShowSettings()
