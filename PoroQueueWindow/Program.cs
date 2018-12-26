@@ -10,7 +10,7 @@ namespace PoroQueueWindow
         static NotifyIcon TrayIcon;
         static RegistryKey BootKey = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
         static MenuItem StartOnBootMenuItem;
-        static Main SettingsMenu;
+        static Settings SettingsMenu;
 
         /// <summary>
         /// The main entry point for the application.
@@ -20,7 +20,7 @@ namespace PoroQueueWindow
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            SettingsMenu = new Main();
+            SettingsMenu = new Settings();
 
             TrayIcon = new NotifyIcon()
             {
@@ -55,10 +55,8 @@ namespace PoroQueueWindow
             var QuitMenuItem = new MenuItem("Quit", (a, b) =>
             {
                 TrayIcon.Dispose();
-                if (Application.MessageLoop)
-                    Application.Exit();
-                else
-                    Environment.Exit(1);
+                Application.Exit();
+                Environment.Exit(1);
             });
             TrayIcon.ContextMenu = new ContextMenu(new MenuItem[] { SettingsMenuItem, StartOnBootMenuItem, QuitMenuItem });
         }
